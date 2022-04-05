@@ -5,7 +5,7 @@
 
 #define BUFF 500
 
-char program[BUFF];
+char progFile[BUFF];
 char fileName[BUFF];
 
 int isfileEmpty(FILE* fp, char* caller);
@@ -13,7 +13,7 @@ int isfileEmpty(FILE* fp, char* caller);
 
 int main(int argc, char** argv)
 {
-	strcpy(program,argv[0]);
+	strcpy(progFile,argv[0]);
 	
 	if(argc == 2)
 	{
@@ -29,13 +29,13 @@ int main(int argc, char** argv)
 		int input;	
 	
 		if(ptr == NULL){
-			fprintf(stderr,"ERROR: %s: Cannot open file\"%s\"\n",program,fileName);
+			fprintf(stderr,"ERROR: %s: Cannot open file\"%s\"\n",progFile,fileName);
 			return EXIT_FAILURE;
 		}
 
 		if((input = getchar()) == EOF)
 		{
-			fprintf(stderr,"ERROR: %s: Input is empty\n",program);
+			fprintf(stderr,"ERROR: %s: Input is empty\n",progFile);
 			return EXIT_FAILURE;
 		}	
 		else
@@ -50,12 +50,14 @@ int main(int argc, char** argv)
 	}
 	else
 	{
-		fprintf(stderr,"ERROR: %s: Please provide one file as an argument to the program\n",program);
+		fprintf(stderr,"ERROR: %s: Please provide one file as an argument to the program\n",progFile);
 		return EXIT_FAILURE;
 	}
 
 	if(parser(fileName) == 0)
 		return EXIT_FAILURE;	
+	
+	printf("Parser successfully\n");	
 	
 	return EXIT_SUCCESS;		
 }

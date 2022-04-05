@@ -19,4 +19,4 @@ $(MASTER): $(MASTER_OBJ) $(OBJ)
 	$(CC) $(CFLAGS) $(MASTER_OBJ) $(OBJ) -o $(MASTER)
 
 clean: 
-	rm -f $(OUTPUT) *.o output.log
+	rm -f $(OUTPUT) *.o output.log a.out

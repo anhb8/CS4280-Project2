@@ -142,6 +142,7 @@ struct token * FSADriver(FILE* fp)
                         strcpy(tok->tokenIns, stringIns);
                         tok->line = countLine;
                         tok->charN = startChar;
+			printError(tok);
 			break;	
 		}
 
