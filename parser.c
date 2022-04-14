@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include "lex.h"
+#include "tree.h"
 #include "token.h"
 #include "parser.h"
 #include "scanner.h"
@@ -35,19 +36,19 @@ int isfileEmpty(FILE * ptr, char* c)
 
         return 0;
 }
-int parser(char* fileName)
+struct node *  parser(char* fileName)
 {
 	ptr = fopen(fileName, "r");
 	if(isfileEmpty(ptr,"parser") == 1)
-		return 0;
+		return NULL;
 	nextChar = fgetc(ptr);
 	filter();
 
-	program();
+	struct node * root = program();
 	//Start here
 		
 	fclose(ptr);
-	return 1;
+	return root;
 }
 
 void printpError(int errorCode){
@@ -117,6 +118,12 @@ void printpError(int errorCode){
 	case 122:
                 printf("Error:The token is not 'portal',but received %s (Line: %d, Character: %d)\n",tok->tokenIns,tok->line,tok->charN);
                 break;
+	case 123:
+		printf("Error:The token is not ')',but received %s (Line: %d, Character: %d)\n",tok->tokenIns,tok->line,tok->charN);
+                break;	
+	case 124:
+		printf("Error:The token is not 'Identifier' or 'Integer',but received %s (Line: %d, Character: %d)\n",tok->tokenIns,tok->line,tok->charN);
+                break;
         }  
 	printf("Error code: %d\n",errorCode);
 	exit(1);
@@ -132,368 +139,463 @@ void filter(){
 	}
 }
 
-void vars() {
+void attachToken(struct node** tempN) {
+	struct token * tempT  = (struct token * ) malloc (sizeof(tok));
+	tempT->tokenIns=(char * ) malloc (sizeof(tok->tokenIns));
+	tempT->tokenID = tok->tokenID;
+	tempT->line= tok->line;
+	tempT->charN=tok->charN;
+	strcpy(tempT->tokenIns,tok->tokenIns);
+	int i;
+	for (i=0;i<5;i++) {
+		if ((*tempN)->arrToken[i] == NULL) {
+			(*tempN)->arrToken[i] = tempT;
+			break;
+		}
+	}	
+}
+struct node * vars() {
+	struct node *temp = createNode("vars");
+
 	if (strcmp(tok->tokenIns,"declare")==0) {
+		attachToken(&temp);
+
 		filter();
 		if (tok->tokenID != IDENT) {
 			printpError(101);	
 		}
-		filter();
-		
+		attachToken(&temp);
+
+		filter();		
 		if(strcmp(tok->tokenIns,":=")!=0) {
 			printpError(102);
 		}
+		attachToken(&temp);
+
 		filter();
 		if (strcmp(tok->tokenIns,"whole")!=0) {
 			printpError(103);
 		}
+		attachToken(&temp);
+
 		filter();
 		if (strcmp(tok->tokenIns,";")!=0) {
                         printpError(104);
                 }
+		attachToken(&temp);
+	
 		filter();
-		vars();   	
+		temp->firstN = vars();   	
 	}else 
 		isConsumed = 0;
+
+	return temp;
 }
 
-void program() {
-	vars();
-
+struct node * program() {
+	struct node * temp=createNode("program");
+	temp->firstN=vars();
 	filter();
 	if (strcmp(tok->tokenIns,"main")!=0) {
 		printpError(100);
 	}
-	
+	attachToken(&temp);
 	filter();
-	block();
+
+	temp->secondN=block();
+	return temp;
 }
 
-void block(){	
+struct node *  block(){	
+	struct node * temp=createNode("block");
 	if(strcmp(tok->tokenIns,"{")!=0) {
 		printpError(105);
 	}
 	
 	else {
+		attachToken(&temp);
 		filter();
-		vars();
+		temp->firstN=vars();
 		filter();
-		stats();
+		temp->secondN=stats();
 		filter();
 		if(strcmp(tok->tokenIns,"}")!=0) {
 			printpError(106);
 		}
+		attachToken(&temp);
 	}
+	return temp;
 }
 
-void stats(){
-	stat();
+struct node * stats(){
+	struct node * temp=createNode("stats");
+	temp->firstN=stat();
 	filter();
-	mStat();
+	temp->secondN=mStat();
+	return temp;
 }
 
-void  mStat(){
+struct node *  mStat(){
+	struct node * temp=createNode("mStat");
 	if(tok->tokenID == KEYWORD || strcmp(tok->tokenIns, "{") == 0) {
-		stat();
+	
+		temp->firstN=stat();
 		filter();
-		mStat();
+		temp->secondN=mStat();
 	}
-
+	 
 	else 
 		isConsumed=0;
+	return temp;
 }
-
-
-void stat(){
+	
+	
+struct node * stat(){
+	struct node * temp=createNode("stat");
 	int isBlock = 0;
 	if(tok->tokenID == KEYWORD || strcmp(tok->tokenIns, "{") == 0){
 		if(strcmp(tok->tokenIns,"listen")==0) {
-			in();						
+			temp->firstN=in();						
 		}
 
 		else if (strcmp(tok->tokenIns,"yell")==0) {
-			out();
+			temp->firstN=out();
 		}
 
 		else if (strcmp(tok->tokenIns,"{")==0) {
-			block();
+			temp->firstN=block();
 			isBlock=1;
 		}
 
 		else if (strcmp(tok->tokenIns,"if")==0) {
-                         if1();
+                         temp->firstN=if1();
                  }
 
 		else if (strcmp(tok->tokenIns,"repeat")==0) {
-                         loop();
+                        temp->firstN= loop();
                  }
 		
 		else if (strcmp(tok->tokenIns,"assign")==0) {
-                         assign();
+                  	temp->firstN=assign();
                  } 
 
 		else if (strcmp(tok->tokenIns,"portal")==0) {
-                         goto1();
+                        temp->firstN= goto1();
                  } 
 
 		else if (strcmp(tok->tokenIns,"label")==0) {
-                         label();
+                         temp->firstN=label();
                  } 
-		 
 	}else
 		printpError(121);//expect a statement
 	
 	if(isBlock != 1){
 		filter();
-		//check ;
+		if(strcmp(tok->tokenIns,";") != 0)
+			printpError(104);
 	}
-		
+	return temp;	
 }
 
-void loop(){
+struct node * loop(){
+	struct node * temp=createNode("loop");
 	if (strcmp(tok->tokenIns,"repeat")!=0) {
 		printpError(122);
 	}
 	
 	else{
+		attachToken(&temp);	
 		filter();
 		if (strcmp(tok->tokenIns,"[")==0) {
-			loop1();
+			temp->firstN = loop1();
 		}
 
 		else 
-			loop2();
+			temp->firstN = loop2();
 	}
+	return temp;
 }
-void in() {
+struct node * in() {
+	struct node * temp=createNode("in");
 	if(strcmp(tok->tokenIns,"listen")!=0) {
                 printpError(108);
         } 
+	attachToken(&temp);	
 	filter();
 
 	if (tok->tokenID != IDENT) {
              printpError(101);    
         }  
+	attachToken(&temp);
+	return temp;
 }
 
-void out() {
+struct node * out() {
+	struct node * temp=createNode("out");
 	  if(strcmp(tok->tokenIns,"yell")!=0) {
                 printpError(110);
-        } 
-	
+          } 
+	 attachToken(&temp);
 	filter();
-	expr();
+	temp->firstN=expr();
+	return temp;
 }
 
-void expr() {
-	N();
-
+struct node * expr() {
+	struct node * temp=createNode("expr");
+	temp->firstN=N();
 	filter();
 	if(strcmp(tok->tokenIns,"-")!=0) {
                 isConsumed=0;
         }
-
 	else {
+		attachToken(&temp);
 		filter();
-		expr();
+		temp->secondN=expr();
+		
 	} 
+	return temp;
 }
-void N(){
-	A();
+struct node * N(){
+	struct node * temp=createNode("N");
+	
+	temp->firstN=A();
 	filter();
-	N1();
+	temp->secondN=N1();
+	return temp;
 }
 
-void N1() {
+struct node * N1() {
+	struct node * temp=createNode("N1");
 	if(strcmp(tok->tokenIns,"/")==0) {
 		filter();
-		A();
+		temp->firstN=A();
 		filter();
-		N1();	
+		temp->secondN=N1();	
 	}
 
 	else if(strcmp(tok->tokenIns,"+")==0) {
+		attachToken(&temp);
 		filter();
-		A();
+		temp->firstN=A();
 		filter();
-		N1();
+		temp->secondN=N1();
 	}
 
 	else
 		isConsumed=0;
-		
+	return temp;	
 
 }
 
-void A() {
-	M();
+struct node * A() {
+	struct node * temp=createNode("A");
+	temp->firstN=M();
 	filter();
 	if(strcmp(tok->tokenIns,"*")!=0) {
 		isConsumed=0;
 	}
 
 	else {
+		attachToken(&temp);
 		filter();
-		A();
+		temp->secondN=A();
+	
 	}
+	return temp;
 }
 
-void M() {
+struct node * M() {
+	struct node * temp=createNode("M");
 	if(strcmp(tok->tokenIns,"%")==0) {
+		attachToken(&temp);
 		filter();
-		M();
+		temp->firstN=M();
 	}
 
 	else 
-		R();
+		temp->firstN=R();
+	return temp;
 }
 
-void R() {
+struct node * R() {
+	struct node * temp=createNode("R");
 	if(strcmp(tok->tokenIns,"(")==0) {
+		attachToken(&temp);
 		filter();
-		expr();
+		temp->firstN=expr();
 		filter();
 		if(strcmp(tok->tokenIns,")")!=0)
 			printpError(123);
+		else
+			attachToken(&temp);
 	}
 	
 	else if (tok->tokenID == IDENT || tok->tokenID == NUMBER) {
-		printf("Token %s consumed\n", tok->tokenIns);
+		//printf("Token %s consumed\n", tok->tokenIns);
+		attachToken(&temp);
 	}
 
 	else
 		printpError(124); //expect identifier or number 
+	return temp;
 }
-void if1() {
+struct node * if1() {
+	struct node * temp=createNode("if");
 	if(strcmp(tok->tokenIns,"if")!=0) {
                 printpError(111);
         } 
 	
 	else {
+		attachToken(&temp);
 		filter();
 		 if(strcmp(tok->tokenIns,"[")!=0) {
                 	printpError(112);
        		 }
 
 		else {
+			attachToken(&temp);
 			filter();
-			expr();
+			temp->firstN=expr();
 			filter();
-			R0();
+			temp->secondN=R0();
 			filter();
-			expr();
+			temp->thirdN=expr();
 			filter();
 			if(strcmp(tok->tokenIns,"]")!=0) {
                 		printpError(113);
         		}	 
 			
 			else {
+				attachToken(&temp);
 				filter();
 				 if(strcmp(tok->tokenIns,"then")!=0) {
                				 printpError(114);
         			 }
 
 				else {
+					attachToken(&temp);
 					filter();
-					stat();
+					
+					temp->fourthN=stat();
 				} 
 			} 
 	
 		}	 		
 	}
+
+	return temp;
 }
 
-void loop1() {
+struct node * loop1() {
+	struct node * temp=createNode("loop1");
 	if(strcmp(tok->tokenIns,"[")!=0) {
                 printpError(112);
         } 
 		
 	else {
+			attachToken(&temp);
 			filter();
-			expr();
+			temp->firstN=expr();
 			filter();
-			R0();
+			temp->secondN=R0();
 			filter();
-			expr();
+			temp->thirdN=expr();
 			filter();
 			if(strcmp(tok->tokenIns,"]")!=0) {
                 		printpError(113);
         		}
 
 			else {
+				 attachToken(&temp);
 				filter();
-				stat();
+				temp->fourthN=stat();
 			} 			
 	}
+	return temp;
 }
 
-void loop2() {
-		stat();
+struct node * loop2() {
+		struct node * temp=createNode("loop2");
+		temp->firstN=stat();
 		filter();
 		if(strcmp(tok->tokenIns,"until")!=0) {
                 	printpError(115);
         	}
 		
 		else {
+			attachToken(&temp);
 			filter();
 			if(strcmp(tok->tokenIns,"[")!=0) {
                 		printpError(112);
         		} 
 			
 			else {
+				attachToken(&temp);
 				filter();
-				expr();
+				temp->secondN=expr();
 				filter();
-				R0();
+				temp->thirdN=R0();
 				filter();
-				expr();
+				temp->fourthN=expr();
 				filter();
 				if(strcmp(tok->tokenIns,"]")!=0) {
                 			printpError(113);
         			} 
+				else 
+					attachToken(&temp);
 			}
 		} 
+	return temp;
 }
 
-void assign() {
+struct node * assign() {
+	struct node * temp=createNode("assign");
 	if(strcmp(tok->tokenIns,"assign")!=0) {
                 printpError(116);
         }
 
 	else {
+		attachToken(&temp);
 		filter();
 		if (tok->tokenID != IDENT) {
                         printpError(101);    
                 } 
 		
 		else {
+			attachToken(&temp);
 			filter();
 			if(strcmp(tok->tokenIns,"=")!=0) {
                			printpError(118);
         		}
 
 			else {
+				attachToken(&temp);
 				filter();
-				expr();				
+				temp->firstN=expr();				
 			} 			
 
 		} 
 	} 
+	return temp;
 }
 
-void R0() {
+ struct node * R0() {
+	struct node * temp=createNode("R0");
 	if(strcmp(tok->tokenIns,">=")==0 || strcmp(tok->tokenIns,"<=")==0 || 
 		strcmp(tok->tokenIns,"==")==0 || strcmp(tok->tokenIns,"!=")==0 ) {
-              //attach toekn to the node;
-              printf("Consumed token %s\n",tok->tokenIns);
+             	attachToken(&temp);
+             // printf("Consumed token %s\n",tok->tokenIns);
         }
 	
 	else if (strcmp(tok->tokenIns,".")==0 ) {
+		attachToken(&temp);
 		filter();
 		if(strcmp(tok->tokenIns,".")==0) {
+			attachToken(&temp);
 			filter();
 			if(strcmp(tok->tokenIns,".")==0) {
-				//attach token to the node
+				attachToken(&temp);
 			}
 			
 			else 
@@ -509,33 +611,43 @@ void R0() {
 		printpError(120);
 
 
-	  
+return temp;	  
 
 }
 
-void label(){
+struct node * label(){
+	struct node * temp=createNode("label");
 	if(strcmp(tok->tokenIns,"label")!=0) {
                 printpError(121);
         }
 
 	else {
+		attachToken(&temp);
 		filter();
 		if (tok->tokenID != IDENT) {
                         printpError(101);    
-                }  
+                }
+		else
+			attachToken(&temp);  
 	} 
+	return temp;
 }
 
-void goto1(){
+struct node * goto1(){	
+	struct node * temp=createNode("goto1");
 	if(strcmp(tok->tokenIns,"portal")!=0) {
                 printpError(122);
         } 
 
 	else {
+		attachToken(&temp);
 		filter();
 		if (tok->tokenID != IDENT) {
                         printpError(101);    
                 } 
+		else 
+			attachToken(&temp);
 	}
+	return temp;
 }
 

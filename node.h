@@ -1,14 +1,15 @@
 #ifndef NODE_H
 #define NODE_H
+#include "token.h"
 
 struct node
 {
-        char* data;
-        struct node* left;
-        struct node* root;
-        struct node* right;
-	char[] fName;
-	struct token[] *arrToken;
+        struct node* firstN;
+        struct node* secondN;
+        struct node* thirdN;
+	struct node* fourthN;
+	char* fName;
+	struct token **arrToken;
 };
 
 #endif

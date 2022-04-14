@@ -1,0 +1,14 @@
+Alina Nguyen - Project 2 - CS4280
+Language: C
+Purpose:The parser function (parser.c) generates an error or returns the parse tree to main (main.c). The main will then call a testing function to print the tree. The printing should be in the same file as the parser or in a separate file. The printing function will use preorder traversal with indentations, as before, for testing purposes
+-Each node will print one line or possibly nothing (if the leaf has nothing in it).
+-The line will start with indentations of 2 spaces per level, then display the node's label and any tokens stored in the node
+
+To start the program, enter: make 
+Enter any of these following commands: 
+./frontEnd fileName or ./frontEnd < fileName.sp2022 or ./frontEnd
+./frontEnd fileName : Read from fileName.sp2022 (does not need to type the extension '.sp2022')
+./frontEnd < fileName.sp2022 : Read from fileName.sp2022
+./frontEnd : Read from keyboard input (1. Enter the string - 2. Press "Enter" - 3. Press Ctrl+D:Exit the current shell)
+
+Remove all the object files that had been created after running program: Enter: make clean 

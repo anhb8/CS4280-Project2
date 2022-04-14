@@ -1,5 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include "node.h"
+#include "tree.h"
 #include <string.h>
 #include "parser.h"
 
@@ -54,9 +56,8 @@ int main(int argc, char** argv)
 		return EXIT_FAILURE;
 	}
 
-	if(parser(fileName) == 0)
-		return EXIT_FAILURE;	
-	
+	struct node* root = parser(fileName); 
+	preorder(root,0);	
 	printf("Parser successfully\n");	
 	
 	return EXIT_SUCCESS;		
